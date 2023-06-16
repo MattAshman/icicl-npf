@@ -3,20 +3,17 @@ import logging
 from functools import partial
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.distributions import normal
 
 from npf.architectures import MLP, merge_flat_input
 
-from .base import LatentNeuralProcessFamily, NeuralProcessFamily
+from .ic_base import ICNeuralProcessFamily
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["CNP", "LNP"]
+__all__ = ["ICCNP"]
 
 
-class CNP(NeuralProcessFamily):
+class ICCNP(ICNeuralProcessFamily):
     """
     Conditional Neural Process from [1].
 
@@ -70,7 +67,7 @@ class CNP(NeuralProcessFamily):
     @property
     def dflt_Modules(self):
         # allow inheritence
-        dflt_Modules = NeuralProcessFamily.dflt_Modules.__get__(self)
+        dflt_Modules = ICNeuralProcessFamily.dflt_Modules.__get__(self)
 
         SubXYEncoder = partial(
             MLP,
@@ -106,55 +103,3 @@ class CNP(NeuralProcessFamily):
 
         # n_z_samples=1. size = [1, batch_size, n_trgt, r_dim]
         return R_trgt.unsqueeze(0)
-
-
-class LNP(LatentNeuralProcessFamily, CNP):
-    """
-    (Latent) Neural process from [1].
-
-    Parameters
-    ----------
-    x_dim : int
-        Dimension of features.
-
-    y_dim : int
-        Dimension of y values.
-
-    encoded_path : {"latent", "both"}
-        Which path(s) to use:
-        - `"latent"`  the decoder gets a sample latent representation as input as in [1].
-        - `"both"` concatenates both the deterministic and sampled latents as input to the decoder [2].
-
-    kwargs :
-        Additional arguments to `ConditionalNeuralProcess` and `NeuralProcessFamily`.
-
-    References
-    ----------
-    [1] Garnelo, Marta, et al. "Neural processes." arXiv preprint
-        arXiv:1807.01622 (2018).
-    [2] Kim, Hyunjik, et al. "Attentive neural processes." arXiv preprint
-        arXiv:1901.05761 (2019).
-    """
-
-    def __init__(self, x_dim, y_dim, encoded_path="latent", **kwargs):
-        super().__init__(x_dim, y_dim, encoded_path=encoded_path, **kwargs)
-
-    def trgt_dependent_representation(self, _, z_samples, R, X_trgt):
-        batch_size, n_trgt, _ = X_trgt.shape
-        n_z_samples = z_samples.size(0)
-
-        if self.encoded_path == "both":
-            # size = [n_z_samples, batch_size, 1, r_dim]
-            R_trgt = self.merge_r_z(R, z_samples)
-
-        elif self.encoded_path == "latent":
-            # size = [n_z_samples, batch_size, 1, z_dim]
-            R_trgt = z_samples
-
-            # size = [n_z_samples, batch_size, 1, r_dim]
-            if self.z_dim != self.r_dim:
-                R_trgt = self.reshaper_z(R_trgt)
-
-        R_trgt = R_trgt.expand(n_z_samples, batch_size, n_trgt, self.r_dim)
-
-        return R_trgt

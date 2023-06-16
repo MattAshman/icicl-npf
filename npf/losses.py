@@ -133,7 +133,6 @@ class ELBOLossLNPF(BaseLossNPF):
     """
 
     def get_loss(self, p_yCc, _, q_zCc, q_zCct, Y_trgt):
-
         # first term in loss is E_{q(z|y_cntxt,y_trgt)}[\sum_t log p(y^t|z)]
         # \sum_t log p(y^t|z). size = [z_samples, batch_size]
         sum_log_p_yCz = sum_log_prob(p_yCc, Y_trgt)
@@ -167,7 +166,6 @@ class NLLLossLNPF(BaseLossNPF):
     """
 
     def get_loss(self, p_yCc, z_samples, q_zCc, q_zCct, Y_trgt):
-
         n_z_samples, batch_size, *n_trgt = p_yCc.batch_shape
 
         # computes approximate LL in a numerically stable way
@@ -182,7 +180,6 @@ class NLLLossLNPF(BaseLossNPF):
 
         # uses importance sampling weights if necessary
         if q_zCct is not None:
-
             # All latents are treated as independent. size = [n_z_samples, batch_size]
             sum_log_q_zCc = sum_log_prob(q_zCc, z_samples)
             sum_log_q_zCct = sum_log_prob(q_zCct, z_samples)
@@ -233,7 +230,6 @@ class SUMOLossLNPF(BaseLossNPF):
         self.p_n_z_samples = p_n_z_samples
 
     def get_loss(self, p_yCc, z_samples, q_zCc, q_zCct, Y_trgt):
-
         n_z_samples, batch_size, *n_trgt = p_yCc.batch_shape
 
         # \sum_t log p(y^t|z). size = [n_z_samples, batch_size]
